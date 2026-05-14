@@ -40,7 +40,9 @@ Tools exposed:
 from __future__ import annotations
 
 import json
+import os
 import re
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -58,6 +60,66 @@ mcp = FastMCP("pdf-sections")
 def _expand(p: str | Path) -> Path:
     """Expand ~ and resolve to an absolute path."""
     return Path(p).expanduser().resolve()
+
+
+def _default_desktop() -> Path:
+    """Locate the user's Desktop directory across macOS, Windows, and Linux.
+
+    Handles common edge cases:
+      * Windows with OneDrive enabled (Desktop redirected to OneDrive\\Desktop).
+      * Windows where the Shell Folders registry key points elsewhere.
+      * Linux with non-English locales (uses `xdg-user-dir DESKTOP`).
+      * Falls back to ~/Desktop and creates it if nothing else exists.
+    """
+    home = Path.home()
+
+    if sys.platform == "win32":
+        # Authoritative source on Windows: Shell Folders registry entry.
+        try:
+            import winreg  # type: ignore[import-not-found]
+            with winreg.OpenKey(
+                winreg.HKEY_CURRENT_USER,
+                r"Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders",
+            ) as key:
+                value, _ = winreg.QueryValueEx(key, "Desktop")
+                expanded = os.path.expandvars(value)
+                candidate = Path(expanded)
+                if candidate.exists():
+                    return candidate
+        except Exception:
+            pass
+        # Fallback: OneDrive\Desktop, then plain Desktop.
+        for candidate in (home / "OneDrive" / "Desktop", home / "Desktop"):
+            if candidate.exists():
+                return candidate
+        return home / "Desktop"
+
+    # macOS and Linux: try ~/Desktop first.
+    desktop = home / "Desktop"
+    if desktop.exists():
+        return desktop
+
+    if sys.platform.startswith("linux"):
+        # Honour XDG: locale-translated dir names (e.g. ~/Bureau in French).
+        try:
+            import subprocess
+            result = subprocess.run(
+                ["xdg-user-dir", "DESKTOP"],
+                capture_output=True,
+                text=True,
+                timeout=2,
+                check=False,
+            )
+            if result.returncode == 0:
+                candidate = Path(result.stdout.strip())
+                if candidate.exists():
+                    return candidate
+        except Exception:
+            pass
+
+    # Last resort: create ~/Desktop (works on every supported platform).
+    desktop.mkdir(parents=True, exist_ok=True)
+    return desktop
 
 
 def _parse_page_range(range_str: str) -> list[int]:
@@ -288,7 +350,7 @@ def split_pdf(
         pages = [p + page_offset for p in pages]
     if output_path is None:
         safe_range = page_range.replace(",", "_").replace(" ", "")
-        out = Path.home() / "Desktop" / f"{src.stem}-{safe_range}.pdf"
+        out = _default_desktop() / f"{src.stem}-{safe_range}.pdf"
     else:
         out = _expand(output_path)
     written, total = _split_pdf_to_file(src, pages, out)
@@ -410,7 +472,7 @@ def extract_sections(
     out_dir = (
         _expand(output_dir)
         if output_dir
-        else Path.home() / "Desktop" / f"{src.stem}-sections"
+        else _default_desktop() / f"{src.stem}-sections"
     )
     out_dir.mkdir(parents=True, exist_ok=True)
 

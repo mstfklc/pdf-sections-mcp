@@ -165,8 +165,8 @@ Restart Claude. The `pdf-sections` server should appear with five tools:
 |---|---|---|
 | `pdf_path` | — | Source PDF. Accepts `~/...` or absolute paths. |
 | `page_range` | — | `"47-76"`, `"5,7,9-12"`, `"1-3,5,8"`. |
-| `output_path` | `~/Desktop/<stem>-<range>.pdf` | `split_pdf` only. |
-| `output_dir` | `~/Desktop/<stem>-sections/` | `extract_sections`, `validate_sections`. |
+| `output_path` | `<Desktop>/<stem>-<range>.pdf` | `split_pdf` only. |
+| `output_dir` | `<Desktop>/<stem>-sections/` | `extract_sections`, `validate_sections`. |
 | `page_offset` | `0` | Added to every page (book page → PDF page). |
 | `labels` | `{}` | Free-form metadata copied into every JSON. Keys are arbitrary. |
 | `parent_headers` | `{}` | Fixed `header_N` values inherited by all sections. |
@@ -429,8 +429,13 @@ Walking through every tool in order:
   `^\d+(?:\.\d+){1,5}\.?\s+Title`. Unnumbered sub-headings will **not** be
   found automatically — provide `section_titles` for those.
 - Page numbers are 1-indexed end-to-end. Page ranges are inclusive.
-- All output paths default to `~/Desktop/`. Override with `output_dir` or
-  `output_path` if you prefer somewhere else.
+- All output paths default to the user's **Desktop**. The location is
+  resolved per-platform: on macOS and Linux it is `~/Desktop` (Linux also
+  honours `xdg-user-dir DESKTOP` so localized folder names like `~/Bureau`
+  work), and on Windows the path is read from the
+  `User Shell Folders\Desktop` registry entry — which means OneDrive
+  redirections (`~/OneDrive/Desktop`) are handled automatically. Override
+  with `output_dir` or `output_path` if you prefer somewhere else.
 - The `_split.pdf` saved next to the JSONs is what `validate_sections` uses
   to re-extract the reference markdown. Keep it around if you intend to
   validate later.

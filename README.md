@@ -174,6 +174,9 @@ Restart Claude. The `pdf-sections` server should appear with five tools:
 | `save_raw_markdown` | `true` | Save `_full.md` next to the JSONs. |
 | `save_split_pdf` | `true` | Save `_split.pdf` next to the JSONs. |
 | `filename_prefix_with_number` | `true` | Names files `1.1.3_title.json`. |
+| `with_summaries` | `true` | `extract_sections` only — request a summary for each section via MCP sampling. |
+| `summary_prompt` | (built-in) | `extract_sections` only — custom prompt template; use `{content}` placeholder. |
+| `summary_max_tokens` | `700` | `extract_sections` only — token cap per summary request. |
 | `apply_fixes` | `false` | `validate_sections` only — rewrite mismatched files. |
 
 ---
@@ -418,9 +421,16 @@ Walking through every tool in order:
 
 ## Notes & caveats
 
-- The `summarized_text` field is intentionally left empty. Summaries depend
-  on a language model — produce them in your client (Claude, etc.) after the
-  JSONs are written.
+- `summarized_text` is generated automatically by default. The MCP requests
+  a 150–220 word standalone summary for every section via the MCP
+  **sampling** protocol, so the work is performed by whichever model the
+  calling client is already wired to (Claude Code, Claude Desktop, etc.). No
+  external API key is needed — the cost rolls into your existing Claude
+  plan. Pass `with_summaries=false` to skip summary generation, or override
+  the prompt via `summary_prompt` (use the `{content}` placeholder for the
+  section body). The tool response includes a `summaries` block with
+  per-file success/failure counts so you can spot clients that do not
+  support sampling.
 - `markitdown` is a high-quality but somewhat opinionated extractor. Some
   PDFs interleave running headers (page numbers, chapter titles) with body
   text; this can show up inside section bodies. Use `validate_sections` to

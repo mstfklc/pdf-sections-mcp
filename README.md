@@ -87,15 +87,14 @@ from a local copy.
 
 #### Option A — Install straight from GitHub (recommended)
 
-`uv` can execute a script that lives at a URL. Replace `<owner>/<repo>` with
-this repository's path on GitHub.
+`uv` can execute a script that lives at a URL — no clone needed.
 
 **Claude Code (CLI):**
 
 ```bash
 claude mcp add pdf-sections -- \
   uv run --script \
-  https://raw.githubusercontent.com/<owner>/<repo>/main/server.py
+  https://raw.githubusercontent.com/mstfklc/pdf-sections-mcp/main/server.py
 ```
 
 **Claude Desktop (manual config):** edit
@@ -109,7 +108,7 @@ claude mcp add pdf-sections -- \
       "args": [
         "run",
         "--script",
-        "https://raw.githubusercontent.com/<owner>/<repo>/main/server.py"
+        "https://raw.githubusercontent.com/mstfklc/pdf-sections-mcp/main/server.py"
       ]
     }
   }
@@ -122,7 +121,7 @@ and caches everything locally. Subsequent runs are fast.
 #### Option B — Install from a local copy
 
 ```bash
-git clone https://github.com/<owner>/<repo>.git ~/pdf-sections-mcp
+git clone https://github.com/mstfklc/pdf-sections-mcp.git ~/pdf-sections-mcp
 claude mcp add pdf-sections -- \
   uv run --script ~/pdf-sections-mcp/server.py
 ```

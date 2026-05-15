@@ -253,11 +253,18 @@ def _split_pdf_to_file(
 
 
 def _pdf_to_markdown(pdf_path: Path) -> str:
-    """Convert PDF to markdown text using markitdown."""
+    """Convert PDF to markdown text using markitdown.
+
+    Normalises U+000C (form-feed) characters that markitdown emits between
+    PDF pages into ordinary newlines. Form-feeds otherwise wedge themselves
+    between a running header and the next section's title (e.g.
+    "BEŞERÎ SİSTEMLER VE SÜREÇLER\\x0c4.2. …"), keeping the heading regex
+    from matching either at line start or after an uppercase letter.
+    """
     from markitdown import MarkItDown
     md = MarkItDown()
     result = md.convert(str(pdf_path))
-    return result.text_content
+    return result.text_content.replace("\f", "\n")
 
 
 # Section detection ----------------------------------------------------------

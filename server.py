@@ -277,11 +277,17 @@ def _pdf_to_markdown(pdf_path: Path) -> str:
 #   * title is bounded by the next sentence punctuation OR 80 characters, whichever
 #     comes first, so we don't capture half a paragraph when line breaks are lost.
 _NUMBERED_HEADING_RE = re.compile(
-    # `^\s*` lets the heading sit after invisible whitespace at the start of a
-    # line — most commonly a U+000C form-feed character that markitdown emits
-    # between PDF pages and which would otherwise sneak between '\n' and the
-    # digit, defeating a bare `^` anchor.
-    r"(?:^\s*|(?<=[\.\!\?;:])\s+)"
+    # Three accepted anchors for a section number:
+    #   1. `^\s*` — start of line plus any invisible whitespace (covers the
+    #      U+000C form-feed that markitdown emits between PDF pages).
+    #   2. `(?<=[\.\!\?;:])\s+` — directly after sentence-ending punctuation
+    #      and a space (handles inline titles when line breaks were lost).
+    #   3. `(?<=[A-ZÇĞİÖŞÜ])` — straight after an uppercase letter, no space
+    #      in between (handles the running-page-header glued to the next
+    #      section's number, e.g. "BEŞERÎ SİSTEMLER VE SÜREÇLER4.2.").
+    # The downstream capital-letter requirement on the title keeps each of
+    # these loose anchors from matching ordinary prose.
+    r"(?:^\s*|(?<=[\.\!\?;:])\s+|(?<=[A-ZÇĞİÖŞÜ]))"
     r"([1-9]\d?(?:\.\d{1,2}){1,5})\.?\s+"
     r"([A-ZÇĞİÖŞÜ][^\n.!?]{2,80})",
     re.MULTILINE,

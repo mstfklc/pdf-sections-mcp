@@ -43,6 +43,7 @@ import json
 import os
 import re
 import sys
+import unicodedata
 from pathlib import Path
 from typing import Any
 
@@ -205,10 +206,18 @@ _SLUG_TR_MAP = str.maketrans({
 
 
 def _slugify(text: str, max_len: int = 70) -> str:
-    """Convert a section title to a filesystem-safe slug."""
-    # Strip a leading section number like "1.1.3."
+    """Convert a section title to a filesystem-safe slug.
+
+    Uses NFKD normalisation to handle Turkish capital İ correctly (which would
+    otherwise lowercase to "i + combining dot above" and break the slug into
+    pieces). After stripping combining marks the remaining diacritic letters
+    are mapped via _SLUG_TR_MAP for the few characters NFKD leaves alone.
+    """
     text = re.sub(r"^\d+(?:\.\d+)+\.?\s*", "", text).strip()
-    text = text.lower().translate(_SLUG_TR_MAP)
+    text = text.lower()
+    text = unicodedata.normalize("NFKD", text)
+    text = "".join(c for c in text if not unicodedata.combining(c))
+    text = text.translate(_SLUG_TR_MAP)
     text = re.sub(r"[^a-z0-9]+", "_", text)
     text = text.strip("_")
     return text[:max_len] or "section"

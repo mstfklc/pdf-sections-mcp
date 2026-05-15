@@ -277,7 +277,11 @@ def _pdf_to_markdown(pdf_path: Path) -> str:
 #   * title is bounded by the next sentence punctuation OR 80 characters, whichever
 #     comes first, so we don't capture half a paragraph when line breaks are lost.
 _NUMBERED_HEADING_RE = re.compile(
-    r"(?:^|(?<=[\.\!\?;:])\s+)"
+    # `^\s*` lets the heading sit after invisible whitespace at the start of a
+    # line — most commonly a U+000C form-feed character that markitdown emits
+    # between PDF pages and which would otherwise sneak between '\n' and the
+    # digit, defeating a bare `^` anchor.
+    r"(?:^\s*|(?<=[\.\!\?;:])\s+)"
     r"([1-9]\d?(?:\.\d{1,2}){1,5})\.?\s+"
     r"([A-ZÇĞİÖŞÜ][^\n.!?]{2,80})",
     re.MULTILINE,

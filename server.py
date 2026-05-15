@@ -254,10 +254,27 @@ def _pdf_to_markdown(pdf_path: Path) -> str:
 # Section detection ----------------------------------------------------------
 
 
+# Heading must look like a textbook section number:
+#   * first segment: 1–99 (no leading zero — rejects "0.1", "01.2", and accidental
+#     matches like a numeric quantity at the start of a line)
+#   * subsequent segments: 1–2 digits — this is what rejects thousands-separator
+#     numbers like "40.000" or "10.000", which otherwise look like "X.YYY"
+#     section identifiers to a naive regex.
 _NUMBERED_HEADING_RE = re.compile(
-    r"^(\d+(?:\.\d+){1,5})\.?\s+([A-Za-zÇĞİÖŞÜçğıöşü][^\n]{2,120})$",
+    r"^([1-9]\d?(?:\.\d{1,2}){1,5})\.?\s+([A-Za-zÇĞİÖŞÜçğıöşü][^\n]{2,120})$",
     re.MULTILINE,
 )
+
+
+def _looks_like_section_title(title: str) -> bool:
+    """Reject obvious false positives where the captured "title" is actually
+    the tail of a sentence (sentence-ending punctuation, etc.)."""
+    title = title.strip()
+    if not title:
+        return False
+    if title[-1] in ".!?;:":
+        return False
+    return True
 
 
 def _auto_detect_numbered_sections(text: str) -> list[dict[str, Any]]:
@@ -265,17 +282,24 @@ def _auto_detect_numbered_sections(text: str) -> list[dict[str, Any]]:
 
     Returns a list of {number, title, title_only, start, end, content}.
     """
-    matches = list(_NUMBERED_HEADING_RE.finditer(text))
+    matches = [
+        m for m in _NUMBERED_HEADING_RE.finditer(text)
+        if _looks_like_section_title(m.group(2))
+    ]
     if not matches:
         return []
     sections: list[dict[str, Any]] = []
     for i, m in enumerate(matches):
         start = m.start()
         end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
+        # Normalise internal whitespace (PDF extractors often inject tabs
+        # between words of a heading).
+        title_only = re.sub(r"\s+", " ", m.group(2).strip())
+        title = re.sub(r"\s+", " ", m.group(0).strip())
         sections.append({
             "number": m.group(1),
-            "title": m.group(0).strip(),
-            "title_only": m.group(2).strip(),
+            "title": title,
+            "title_only": title_only,
             "start": start,
             "end": end,
             "content": text[start:end].strip(),

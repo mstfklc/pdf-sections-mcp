@@ -260,8 +260,17 @@ def _pdf_to_markdown(pdf_path: Path) -> str:
 #   * subsequent segments: 1–2 digits — this is what rejects thousands-separator
 #     numbers like "40.000" or "10.000", which otherwise look like "X.YYY"
 #     section identifiers to a naive regex.
+#   * heading may appear at the start of a line OR mid-line after sentence-ending
+#     punctuation (".!?;:" + whitespace). This handles PDF extractors that collapse
+#     line breaks and concatenate a new section title onto the end of a paragraph.
+#   * title must begin with an uppercase letter (Latin or Turkish) — keeps body
+#     text and lowercase fragments from being mistaken for a heading.
+#   * title is bounded by the next sentence punctuation OR 80 characters, whichever
+#     comes first, so we don't capture half a paragraph when line breaks are lost.
 _NUMBERED_HEADING_RE = re.compile(
-    r"^([1-9]\d?(?:\.\d{1,2}){1,5})\.?\s+([A-Za-zÇĞİÖŞÜçğıöşü][^\n]{2,120})$",
+    r"(?:^|(?<=[\.\!\?;:])\s+)"
+    r"([1-9]\d?(?:\.\d{1,2}){1,5})\.?\s+"
+    r"([A-ZÇĞİÖŞÜ][^\n.!?]{2,80})",
     re.MULTILINE,
 )
 
